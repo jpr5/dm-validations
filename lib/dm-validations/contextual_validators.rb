@@ -43,7 +43,9 @@ module DataMapper
         contexts.clear
       end
 
-      # Execute all validators in the named context against the target
+      # Execute all validators in the named context against the target.  Load
+      # together any properties that are designated lazy but are not yet loaded.
+      # Optionally only validate dirty properties.
       #
       # @param [Symbol]
       #   named_context the context we are validating against
@@ -54,9 +56,16 @@ module DataMapper
       def execute(named_context, target)
         target.errors.clear!
 
-        context(named_context).map do |validator|
-          validator.execute?(target) ? validator.call(target) : true
-        end.all?
+        validators = context(named_context).select { |validator| validator.execute?(target) }
+
+        # Only run validators on dirty attributes.
+        validators = validators.select{|v| target.dirty_attributes.keys.include?(v.field_name) }
+
+        # Load all lazy, not-yet-loaded, needs-to-be-validated properties.
+        need_to_load = validators.map{ |v| target.class.properties[v.field_name] }.select { |p| p.lazy? && !p.loaded?(target) }
+        target.__send__(:eager_load, need_to_load)
+
+        validators.map { |validator| validator.call(target) }.all?
       end
 
     end # module ContextualValidators
