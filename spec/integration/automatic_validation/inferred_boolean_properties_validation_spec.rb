@@ -6,57 +6,55 @@ describe "A model with a Boolean property" do
     @model = HasNullableBoolean.new(:id => 1)
   end
 
-  describe "assigned to true" do
+  describe "assigned a true" do
     before :all do
-      @model.set(:bool => true)
+      @model.bool = true
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to false" do
+  describe "assigned a false" do
     before :all do
-      @model.set(:bool => false)
+      @model.bool = false
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to a nil" do
+  describe "assigned a nil" do
     before :all do
-      @model.set(:bool => nil)
+      @model.bool = nil
     end
 
     it_should_behave_like "valid model"
   end
 end
 
-
-
 describe "A model with a required Boolean property" do
   before :all do
-    @model = HasNotNullableBoolean.new(:id => 1)
+    @model = HasRequiredBoolean.new(:id => 1)
   end
 
-  describe "assigned to true" do
+  describe "assigned a true" do
     before :all do
-      @model.set(:bool => true)
+      @model.bool = true
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to false" do
+  describe "assigned a false" do
     before :all do
-      @model.set(:bool => false)
+      @model.bool = false
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to a nil" do
+  describe "assigned a nil" do
     before :all do
-      @model.set(:bool => nil)
+      @model.bool = nil
     end
 
     it_should_behave_like "invalid model"
@@ -67,32 +65,30 @@ describe "A model with a required Boolean property" do
   end
 end
 
-
-
 describe "A model with a required paranoid Boolean property" do
   before :all do
-    @model = HasNotNullableParanoidBoolean.new(:id => 1)
+    @model = HasRequiredParanoidBoolean.new(:id => 1)
   end
 
-  describe "assigned to true" do
+  describe "assigned a true" do
     before :all do
-      @model.set(:bool => true)
+      @model.bool = true
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to false" do
+  describe "assigned a false" do
     before :all do
-      @model.set(:bool => false)
+      @model.bool = false
     end
 
     it_should_behave_like "valid model"
   end
 
-  describe "assigned to a nil" do
+  describe "assigned a nil" do
     before :all do
-      @model.set(:bool => nil)
+      @model.bool = nil
     end
 
     it_should_behave_like "invalid model"
