@@ -1,4 +1,4 @@
-# encoding: binary
+# encoding: UTF-8
 
 module DataMapper
   module Validations
@@ -7,7 +7,12 @@ module DataMapper
 
         def self.included(base)
           DataMapper::Validations::FormatValidator::FORMATS.merge!(
-            :email_address => [ EmailAddress, lambda { |field, value| '%s is not a valid email address'.t(value) }]
+            :email_address => [
+              EmailAddress,
+              lambda { |field, value|
+                '%s is not a valid email address'.t(value)
+              }
+            ]
           )
         end
 
@@ -17,28 +22,37 @@ module DataMapper
         # 99% of the time you do not want to allow these email addresses
         # in a public web application.
         EmailAddress = begin
-            alpha = "a-zA-Z"
-            digit = "0-9"
-            atext = "[#{alpha}#{digit}\!\#\$\%\&\'\*+\/\=\?\^\_\`\{\|\}\~\-]"
-            dot_atom_text = "#{atext}+([.]#{atext}*)+" # Last char changed from * to +
-            dot_atom = "#{dot_atom_text}"
-            qtext = '[^\\x0d\\x22\\x5c\\x80-\\xff]'
-            text = "[\\x01-\\x09\\x11\\x12\\x14-\\x7f]"
-            quoted_pair = "(\\x5c#{text})"
-            qcontent = "(?:#{qtext}|#{quoted_pair})"
-            quoted_string = "[\"]#{qcontent}+[\"]"
-            atom = "#{atext}+"
-            word = "(?:#{atom}|#{quoted_string})"
-            obs_local_part = "#{word}([.]#{word})*"
-            local_part = "(?:#{dot_atom}|#{quoted_string}|#{obs_local_part})"
-            no_ws_ctl = "\\x01-\\x08\\x11\\x12\\x14-\\x1f\\x7f"
-            dtext = "[#{no_ws_ctl}\\x21-\\x5a\\x5e-\\x7e]"
-            dcontent = "(?:#{dtext}|#{quoted_pair})"
-            domain_literal = "\\[#{dcontent}+\\]"
-            obs_domain = "#{atom}([.]#{atom})+" # Last char changed from * to +
-            domain = "(?:#{dot_atom}|#{domain_literal}|#{obs_domain})"
-            addr_spec = "#{local_part}\@#{domain}"
-            pattern = /^#{addr_spec}$/
+          if RUBY_VERSION == '1.9.2' && RUBY_ENGINE == 'jruby' && JRUBY_VERSION <= '1.6.2'
+            # There is an obscure bug in jruby 1.6 that prevents matching
+            # on unicode properties here. Remove this logic branch once
+            # a stable jruby release fixes this.
+            #
+            # http://jira.codehaus.org/browse/JRUBY-5622
+            letter = 'a-zA-Z'
+          else
+            letter = 'a-zA-Z\p{L}'  # Changed from RFC2822 to include unicode chars
+          end
+          digit          = '0-9'
+          atext          = "[#{letter}#{digit}\!\#\$\%\&\'\*+\/\=\?\^\_\`\{\|\}\~\-]"
+          dot_atom_text  = "#{atext}+([.]#{atext}*)+"
+          dot_atom       = dot_atom_text
+          no_ws_ctl      = '\x01-\x08\x11\x12\x14-\x1f\x7f'
+          qtext          = "[^#{no_ws_ctl}\\x0d\\x22\\x5c]"  # Non-whitespace, non-control character except for \ and "
+          text           = '[\x01-\x09\x11\x12\x14-\x7f]'
+          quoted_pair    = "(\\x5c#{text})"
+          qcontent       = "(?:#{qtext}|#{quoted_pair})"
+          quoted_string  = "[\"]#{qcontent}+[\"]"
+          atom           = "#{atext}+"
+          word           = "(?:#{atom}|#{quoted_string})"
+          obs_local_part = "#{word}([.]#{word})*"
+          local_part     = "(?:#{dot_atom}|#{quoted_string}|#{obs_local_part})"
+          dtext          = "[#{no_ws_ctl}\\x21-\\x5a\\x5e-\\x7e]"
+          dcontent       = "(?:#{dtext}|#{quoted_pair})"
+          domain_literal = "\\[#{dcontent}+\\]"
+          obs_domain     = "#{atom}([.]#{atom})+"
+          domain         = "(?:#{dot_atom}|#{domain_literal}|#{obs_domain})"
+          addr_spec      = "#{local_part}\@#{domain}"
+          pattern        = /\A#{addr_spec}\z/u
         end
 
       end # module Email

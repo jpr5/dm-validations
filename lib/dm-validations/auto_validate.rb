@@ -1,14 +1,14 @@
 module DataMapper
-  class Property
-    # for options_with_message
-    accept_options :message, :messages, :set, :validates, :auto_validation, :format
-  end
+  # for options_with_message
+  Property.accept_options :message, :messages, :set, :validates, :auto_validation, :format
 
   module Validations
     module AutoValidations
       @disable_auto_validations = false
 
       # adds message for validator
+      # 
+      # @api private
       def options_with_message(base_options, property, validator_name)
         options = base_options.clone
         opts    = property.options
@@ -26,13 +26,14 @@ module DataMapper
 
       # disables generation of validations for
       # duration of given block
-      def without_auto_validations(&block)
+      # 
+      # @api public
+      def without_auto_validations
         @disable_auto_validations = true
-        block.call
+        yield
         @disable_auto_validations = false
       end
 
-      ##
       # Auto-generate validations for a given property. This will only occur
       # if the option :auto_validation is either true or left undefined.
       #
@@ -46,8 +47,9 @@ module DataMapper
       #   :length => 20
       #       Setting the option :length causes a validates_length_of
       #       validator to be automatically created on the property. If the
-      #       value is a Integer the validation will set :maximum => value if
-      #       the value is a Range the validation will set :within => value
+      #       value is a Integer the validation will set :maximum => value
+      #       if the value is a Range the validation will set
+      #       :within => value
       #
       #   :format => :predefined / lambda / Proc
       #       Setting the :format option causes a validates_format_of
@@ -81,8 +83,10 @@ module DataMapper
       #   :message => "Some message"
       #       It is just shortcut if only one validation option is set
       #
+      # @api private
       def auto_generate_validations(property)
-        return if disabled_auto_validations? || skip_auto_validation_for?(property)
+        return if (disabled_auto_validations? ||
+                   skip_auto_validation_for?(property))
 
         # all auto-validations (aside from presence) should skip
         # validation when the value is nil
@@ -107,6 +111,7 @@ module DataMapper
       # @return [TrueClass, FalseClass]
       #   true if auto validation is currently disabled
       #
+      # @api semipublic
       def disabled_auto_validations?
         @disable_auto_validations || false
       end
@@ -118,19 +123,30 @@ module DataMapper
       # given and it's value evaluates to true
       #
       # @return [TrueClass, FalseClass]
-      #   true for properties with :auto_validation option that has positive value
+      #   true for properties with :auto_validation option that has
+      #   positive value
+      #
+      # @api private
       def skip_auto_validation_for?(property)
-        property.options.key?(:auto_validation) && !property.options[:auto_validation]
+        (property.options.key?(:auto_validation) &&
+         !property.options[:auto_validation])
       end
 
+      # @api private
       def infer_presence_validation_for(property, options)
         return if skip_presence_validation?(property)
 
-        validates_presence_of property.name, options_with_message(options, property, :presence)
+        validates_presence_of property.name, options_with_message(
+          options,
+          property,
+          :presence
+        )
       end
 
+      # @api private
       def infer_length_validation_for(property, options)
-        return unless [ DataMapper::Property::String, DataMapper::Property::Text ].any? { |klass| property.kind_of?(klass) }
+        return unless (property.kind_of?(DataMapper::Property::String) ||
+                       property.kind_of?(DataMapper::Property::Text))
 
         length = property.options.fetch(:length, DataMapper::Property::String::DEFAULT_LENGTH)
 
@@ -142,17 +158,27 @@ module DataMapper
           options[:maximum] = length
         end
 
-        validates_length_of property.name, options_with_message(options, property, :length)
+        validates_length_of property.name, options_with_message(
+          options,
+          property,
+          :length
+        )
       end
 
+      # @api private
       def infer_format_validation_for(property, options)
         return unless property.options.key?(:format)
 
         options[:with] = property.options[:format]
 
-        validates_format_of property.name, options_with_message(options, property, :format)
+        validates_format_of property.name, options_with_message(
+          options,
+          property,
+          :format
+        )
       end
 
+      # @api private
       def infer_uniqueness_validation_for(property, options)
         return unless property.options.key?(:unique)
 
@@ -160,20 +186,34 @@ module DataMapper
           when Array, Symbol
             options[:scope] = Array(value)
 
-            validates_uniqueness_of property.name, options_with_message(options, property, :is_unique)
+            validates_uniqueness_of property.name, options_with_message(
+              options,
+              property,
+              :is_unique
+            )
           when TrueClass
-            validates_uniqueness_of property.name, options_with_message(options, property, :is_unique)
+            validates_uniqueness_of property.name, options_with_message(
+              options,
+              property,
+              :is_unique
+            )
         end
       end
 
+      # @api private
       def infer_within_validation_for(property, options)
         return unless property.options.key?(:set)
 
         options[:set] = property.options[:set]
 
-        validates_within property.name, options_with_message(options, property, :within)
+        validates_within property.name, options_with_message(
+          options,
+          property,
+          :within
+        )
       end
 
+      # @api private
       def infer_type_validation_for(property, options)
         return if property.respond_to?(:custom?) && property.custom?
 
@@ -185,22 +225,35 @@ module DataMapper
         if Integer == property.primitive
           options[:integer_only] = true
 
-          validates_numericality_of property.name, options_with_message(options, property, :is_number)
-        elsif BigDecimal == property.primitive || Float == property.primitive
+          validates_numericality_of property.name, options_with_message(
+            options, property,
+            :is_number
+          )
+        elsif (BigDecimal == property.primitive ||
+               Float == property.primitive)
           options[:precision] = property.precision
           options[:scale]     = property.scale
 
-          validates_numericality_of property.name, options_with_message(options, property, :is_number)
+          validates_numericality_of property.name, options_with_message(
+            options,
+            property,
+            :is_number
+          )
         else
           # We only need this in the case we don't already
           # have a numeric validator, because otherwise
           # it will cause duplicate validation errors
-          validates_primitive_type_of property.name, options_with_message(options, property, :is_primitive)
+          validates_primitive_type_of property.name, options_with_message(
+            options,
+            property,
+            :is_primitive
+          )
         end
       end
 
       private
 
+      # @api private
       def skip_presence_validation?(property)
         property.allow_blank? || property.serial?
       end

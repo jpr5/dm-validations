@@ -1,3 +1,4 @@
+# encoding: UTF-8
 require 'spec_helper'
 require 'integration/format_validator/spec_helper'
 
@@ -40,13 +41,34 @@ describe 'DataMapper::Validations::Fixtures::BillOfLading' do
         'Max@Job 3:14',
         'Job@Book of Job',
         'test@localhost',
-        'J. P. \'s-Gravezande, a.k.a. The Hacker!@example.com'].each do |email|
+        'J. P. \'s-Gravezande, a.k.a. The Hacker!@example.com',
+        "test@example.com\nsomething after the newline"].each do |email|
     describe "with email value of #{email} (non RFC2822 compliant)" do
       before :all do
         @model = DataMapper::Validations::Fixtures::BillOfLading.new(valid_attributes.merge(:email => email))
       end
 
       it_should_behave_like "invalid model"
+    end
+  end
+
+  describe "with valid email including unicode characters" do
+    before :all do
+      @model = DataMapper::Validations::Fixtures::BillOfLading.new(valid_attributes.merge(:email => 'pelé@gmail.com'))
+    end
+
+    if RUBY_VERSION == '1.9.2' && RUBY_ENGINE == 'jruby'
+      # Not supported on jruby 1.9 yet - see formats/email.rb
+      it 'should not raise an error' do
+        lambda { @model.valid? }.should_not raise_error
+      end
+    else
+      # Unicode emails not supported on MRI18
+      unless !defined?(RUBY_ENGINE) && RUBY_VERSION == '1.8.7'
+        it 'should behave like valid model' do
+          @model.should be_valid
+        end
+      end
     end
   end
 
